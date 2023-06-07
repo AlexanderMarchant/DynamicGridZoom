@@ -30,7 +30,7 @@ struct GridZoomStages
             }
             else
             {
-                return [1, 2, 3, 4, 5, 6, 7, 8]
+                return [1, 2, 4, 6, 8]
             }
         }
     }
@@ -56,6 +56,11 @@ struct ContentView: View {
     let data = (1...300).map { "\($0)" }
     
     @State var scale: CGFloat = 1.0
+    @State var scaleFactor: CGFloat = 1.0
+    @State var zoomFactor: CGFloat = 1.0
+    
+    @State var isMagnifying = false
+    
     @State private var size: CGFloat = 100
     
     @State private var currentZoomStageIndex = 2
@@ -86,7 +91,21 @@ struct ContentView: View {
                         Color.clear
                             .onAppear {
                                 self.gridWidth = proxy.frame(in: .local).width
-                                self.update(increaseZoom: false)
+                                
+                                let zoomStages = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex)
+                                
+                                let availableSpace = self.gridWidth - (2 * CGFloat(zoomStages))
+                                
+                                let updatedSize = availableSpace / CGFloat(zoomStages)
+                                
+                                self.size = updatedSize
+                                
+                                
+                                let zoomStages1 = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex - 1)
+                                
+                                let updatedSize1 = availableSpace / CGFloat(zoomStages1)
+                                
+                                self.zoomFactor = updatedSize1 / updatedSize
                             }
                     }
                 )
@@ -97,37 +116,108 @@ struct ContentView: View {
                             
                             var adjustedState = state - self.previousZoomStageUpdateState
                             
-                            if self.currentZoomStageIndex == 0 &&
-                                adjustedState >= 1.05
+                            // Decreasing the size
+                            if scale <= 1,
+                               adjustedState < 1
                             {
-                                adjustedState = 1.05
+                                self.isMagnifying = false
+                                if self.currentZoomStageIndex > GridZoomStages.zoomStages.count - 1
+                                {
+                                    if adjustedState >= 0.95
+                                    {
+                                        self.scale = self.scaleFactor - (1 - adjustedState)
+                                    }
+                                }
+                                else
+                                {
+                                    let zoomStages = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex + 1)
+                                    
+                                    let availableSpace = self.gridWidth - (2 * CGFloat(zoomStages))
+                                    
+                                    let updatedSize = availableSpace / CGFloat(zoomStages)
+                                    
+                                    self.previousZoomStageUpdateState = state - 1
+                                    self.zoomFactor = updatedSize / self.size
+                                    self.scaleFactor = self.size / updatedSize
+                                    self.scale = self.scaleFactor
+                                    self.size = updatedSize
+                                    self.currentZoomStageIndex = self.currentZoomStageIndex + 1
+                                }
                             }
-                            else if self.currentZoomStageIndex == GridZoomStages.zoomStages.count - 1 &&
-                                        adjustedState <= 0.95
+                            // Increasing the size
+                            else if scale >= self.zoomFactor,
+                                    adjustedState > 1
                             {
-                                adjustedState = 0.95
+                                self.isMagnifying = true
+                                if self.currentZoomStageIndex == 0
+                                {
+                                    if adjustedState <= 1.05
+                                    {
+                                        self.scale = self.scaleFactor - (1 - adjustedState)
+                                    }
+                                }
+                                else
+                                {
+                                    let zoomStages = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex - 1)
+                                    
+                                    let availableSpace = self.gridWidth - (2 * CGFloat(zoomStages))
+                                    
+                                    let updatedSize = availableSpace / CGFloat(zoomStages)
+                                    
+                                    let zoomStages1 = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex - 2)
+                                    
+                                    let availableSpace1 = self.gridWidth - (2 * CGFloat(zoomStages1))
+                                    
+                                    let nextSize = availableSpace1 / CGFloat(zoomStages1)
+                                    
+                                    self.previousZoomStageUpdateState = state - 1
+                                    self.zoomFactor = nextSize / updatedSize
+                                    self.scaleFactor = 1
+                                    self.scale = 1
+                                    self.size = updatedSize
+                                    self.currentZoomStageIndex = self.currentZoomStageIndex - 1
+                                }
                             }
+                            else
+                            {
+                                self.scale = self.scaleFactor - (1 - adjustedState)
+                            }
+                            
                                 
                             self.actualState = state
                             self.adjustedState = adjustedState
-                            self.scale = adjustedState
-                            
-                            if adjustedState >= 1.3
-                            {
-                                self.previousZoomStageUpdateState = state - 1
-                                self.update(increaseZoom: true)
-                            }
-                            else if adjustedState <= 0.7
-                            {
-                                self.previousZoomStageUpdateState = state - 1
-                                self.update(increaseZoom: false)
-                            }
                         }
                     .onEnded { _ in
-                        self.zooming = false
-                        self.scale = 1
-                        self.previousZoomStageUpdateState = 0
-                        self.adjustedState = 0
+//                        if self.scale >= 1
+//                        {
+//                            let zoomStages = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex - 1)
+//                            
+//                            let availableSpace = self.gridWidth - (2 * CGFloat(zoomStages))
+//                            
+//                            let updatedSize = availableSpace / CGFloat(zoomStages)
+//                            self.size = updatedSize
+//                            self.currentZoomStageIndex = self.currentZoomStageIndex - 1
+//                        }
+//                        else if self.scale <= scaleFactor
+//                        {
+//                            let zoomStages = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex + 1)
+//                            
+//                            let availableSpace = self.gridWidth - (2 * CGFloat(zoomStages))
+//                            
+//                            let updatedSize = availableSpace / CGFloat(zoomStages)
+//                            self.size = updatedSize
+//                            self.currentZoomStageIndex = self.currentZoomStageIndex + 1
+//                        }
+                        
+                        withAnimation
+                        {
+                            self.zooming = false
+                            self.scale = 1
+                            self.scaleFactor = 1
+                            self.zoomFactor = 1
+                            self.previousZoomStageUpdateState = 0
+                            self.adjustedState = 0
+                        }
                     }
                 )
             }
@@ -138,9 +228,13 @@ struct ContentView: View {
                 Text("Actual State: \(self.actualState)")
                 Text("Adjusted State: \(self.adjustedState)")
                 
+                Text("Scale: \(self.scale)")
                 
-                Text("Zoom Index: \(self.currentZoomStageIndex)")
-                Text("Number of Items: \(GridZoomStages.getZoomStage(at: self.currentZoomStageIndex))")
+                Text("Scale Factor: \(self.scaleFactor)")
+                Text("Zoom Factor: \(self.zoomFactor)")
+                
+//                Text("Zoom Index: \(self.currentZoomStageIndex)")
+//                Text("Number of Items: \(GridZoomStages.getZoomStage(at: self.currentZoomStageIndex))")
             }
             .padding(8)
             .background(Color.white.opacity(0.85))
@@ -163,12 +257,10 @@ struct ContentView: View {
         {
             // Performance starts to take a hit at 6/7 items displayed with very simple views
             // Disabling animations improves this
-            withAnimation {
-                self.size = size
-                
-                self.scale = 1
-                self.currentZoomStageIndex = newStageIndex
-            }
+//            withAnimation {
+//                self.size = size
+//                self.currentZoomStageIndex = newStageIndex
+//            }
         }
     }
 }
