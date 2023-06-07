@@ -91,21 +91,7 @@ struct ContentView: View {
                         Color.clear
                             .onAppear {
                                 self.gridWidth = proxy.frame(in: .local).width
-                                
-                                let zoomStages = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex)
-                                
-                                let availableSpace = self.gridWidth - (2 * CGFloat(zoomStages))
-                                
-                                let updatedSize = availableSpace / CGFloat(zoomStages)
-                                
-                                self.size = updatedSize
-                                
-                                
-                                let zoomStages1 = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex - 1)
-                                
-                                let updatedSize1 = availableSpace / CGFloat(zoomStages1)
-                                
-                                self.zoomFactor = updatedSize1 / updatedSize
+                                self.calculateZoomFactor(updateSize: true)
                             }
                     }
                 )
@@ -158,29 +144,24 @@ struct ContentView: View {
                                 }
                                 else
                                 {
-                                    let zoomStages = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex - 1)
+                                    self.currentZoomStageIndex = self.currentZoomStageIndex - 1
                                     
-                                    let availableSpace = self.gridWidth - (2 * CGFloat(zoomStages))
-                                    
-                                    let updatedSize = availableSpace / CGFloat(zoomStages)
-                                    
-                                    let zoomStages1 = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex - 2)
-                                    
-                                    let availableSpace1 = self.gridWidth - (2 * CGFloat(zoomStages1))
-                                    
-                                    let nextSize = availableSpace1 / CGFloat(zoomStages1)
+                                    self.calculateZoomFactor(updateSize: true)
                                     
                                     self.previousZoomStageUpdateState = state - 1
-                                    self.zoomFactor = nextSize / updatedSize
-                                    self.scaleFactor = 1
                                     self.scale = 1
-                                    self.size = updatedSize
-                                    self.currentZoomStageIndex = self.currentZoomStageIndex - 1
                                 }
                             }
                             else
                             {
-                                self.scale = self.scaleFactor - (1 - adjustedState)
+                                if self.isMagnifying
+                                {
+                                    self.scale = 1 - (1 - adjustedState)
+                                }
+                                else
+                                {
+                                    self.scale = self.scaleFactor - (1 - adjustedState)
+                                }
                             }
                             
                                 
@@ -211,12 +192,13 @@ struct ContentView: View {
                         
                         withAnimation
                         {
+                            self.calculateZoomFactor(updateSize: false)
                             self.zooming = false
                             self.scale = 1
                             self.scaleFactor = 1
-                            self.zoomFactor = 1
                             self.previousZoomStageUpdateState = 0
                             self.adjustedState = 0
+                            self.isMagnifying = false
                         }
                     }
                 )
@@ -240,6 +222,30 @@ struct ContentView: View {
             .background(Color.white.opacity(0.85))
             .cornerRadius(5)
             .shadow(color: .black.opacity(0.5), radius: 3)
+        }
+    }
+    
+    func calculateZoomFactor(updateSize: Bool)
+    {
+        // Calculate the current size
+        let currentStage = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex)
+        
+        let currentAvailableSpace = self.gridWidth - (2 * CGFloat(currentStage))
+        
+        let currentSize = currentAvailableSpace / CGFloat(currentStage)
+        
+        // Calculate the zoom factor if the user wants to zoom in
+        let magnifiedZoomStage = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex - 1)
+        
+        let magnifiedAvailableSpace = self.gridWidth - (2 * CGFloat(magnifiedZoomStage))
+        
+        let magnifiedSize = magnifiedAvailableSpace / CGFloat(magnifiedZoomStage)
+        
+        self.zoomFactor = magnifiedSize / currentSize
+        
+        if updateSize
+        {
+            self.size = currentSize
         }
     }
     
