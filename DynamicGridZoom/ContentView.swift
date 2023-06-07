@@ -73,7 +73,7 @@ struct ContentView: View {
     
     var body: some View {
         
-        var columns = [
+        let columns = [
             GridItem(.adaptive(minimum: size), spacing: 2)
         ]
         
@@ -98,9 +98,9 @@ struct ContentView: View {
                 .gesture(MagnificationGesture()
                         .onChanged { state in
                             
-                            self.zooming = true
-                            
                             var adjustedState = state - self.previousZoomStageUpdateState
+                            
+                            self.zooming = true
                             
                             // Decreasing the size
                             if scale <= 1,
@@ -171,41 +171,46 @@ struct ContentView: View {
                                 }
                             }
                             
-                                
                             self.actualState = state
                             self.adjustedState = adjustedState
                         }
                     .onEnded { _ in
-//                        if self.scale >= 1
-//                        {
-//                            let zoomStages = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex - 1)
-//                            
-//                            let availableSpace = self.gridWidth - (2 * CGFloat(zoomStages))
-//                            
-//                            let updatedSize = availableSpace / CGFloat(zoomStages)
-//                            self.size = updatedSize
-//                            self.currentZoomStageIndex = self.currentZoomStageIndex - 1
-//                        }
-//                        else if self.scale <= scaleFactor
-//                        {
-//                            let zoomStages = GridZoomStages.getZoomStage(at: self.currentZoomStageIndex + 1)
-//                            
-//                            let availableSpace = self.gridWidth - (2 * CGFloat(zoomStages))
-//                            
-//                            let updatedSize = availableSpace / CGFloat(zoomStages)
-//                            self.size = updatedSize
-//                            self.currentZoomStageIndex = self.currentZoomStageIndex + 1
-//                        }
                         
-                        withAnimation
+                        let shouldMagnify = self.adjustedState > 1
+                        
+                        withAnimation(.linear(duration: 0.25))
                         {
-                            self.calculateZoomFactor(at: self.currentZoomStageIndex)
-                            self.zooming = false
-                            self.scale = 1
-                            self.scaleFactor = 1
-                            self.previousZoomStageUpdateState = 0
-                            self.adjustedState = 0
-                            self.isMagnifying = false
+                            if shouldMagnify
+                            {
+                                self.scale = self.zoomFactor
+                            }
+                            else
+                            {
+                                self.calculateZoomFactor(at: self.currentZoomStageIndex)
+                                self.zooming = false
+                                self.scale = 1
+                                self.scaleFactor = 1
+                                self.previousZoomStageUpdateState = 0
+                                self.adjustedState = 0
+                            }
+                        }
+                        
+                        if shouldMagnify
+                        {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25)
+                            {
+                                if self.currentZoomStageIndex > 0
+                                {
+                                    self.currentZoomStageIndex = self.currentZoomStageIndex - 1
+                                }
+                                
+                                self.calculateZoomFactor(at: self.currentZoomStageIndex)
+                                self.zooming = false
+                                self.scale = 1
+                                self.scaleFactor = 1
+                                self.previousZoomStageUpdateState = 0
+                                self.adjustedState = 0
+                            }
                         }
                     }
                 )
@@ -221,6 +226,8 @@ struct ContentView: View {
                 
                 Text("Scale Factor: \(self.scaleFactor)")
                 Text("Zoom Factor: \(self.zoomFactor)")
+                
+//                Text("Magnifying: \(self.isMagnifying ? "true" : "false")")
                 
 //                Text("Zoom Index: \(self.currentZoomStageIndex)")
 //                Text("Number of Items: \(GridZoomStages.getZoomStage(at: self.currentZoomStageIndex))")
