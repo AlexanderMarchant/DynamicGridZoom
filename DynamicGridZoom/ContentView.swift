@@ -7,56 +7,15 @@
 
 import SwiftUI
 
-struct GridZoomStages
-{
-    static var zoomStages: [Int]
-    {
-        if UIDevice.current.userInterfaceIdiom == .pad
-        {
-            if UIDevice.current.orientation.isLandscape
-            {
-                return [4, 6, 10, 14, 18]
-            }
-            else
-            {
-                return [4, 6, 8, 10, 12]
-            }
-        }
-        else
-        {
-            if UIDevice.current.orientation.isLandscape
-            {
-                return [4, 6, 8, 9]
-            }
-            else
-            {
-                return [1, 2, 4, 6, 8]
-            }
-        }
-    }
-    
-    static func getZoomStage(at index: Int) -> Int
-    {
-        if index >= zoomStages.count
-        {
-            return zoomStages.last!
-        }
-        else if index < 0
-        {
-            return zoomStages.first!
-        }
-        else
-        {
-            return zoomStages[index]
-        }
-    }
-}
-
 struct ContentView: View {
     let data = (1...300).map { "\($0)" }
     
     @State var scale: CGFloat = 1.0
+    
+    // Multiple of how much to decrease the existing size to equal the next decreased size
     @State var scaleFactor: CGFloat = 1.0
+    
+    // Multiple of how much to increase the existing size to equal the next increased size
     @State var zoomFactor: CGFloat = 1.0
     
     @State var isMagnifying = false
@@ -96,6 +55,7 @@ struct ContentView: View {
                 .gesture(MagnificationGesture()
                         .onChanged { state in
                             
+                            // Adjust state so we are always working from 1 because we are changing layouts whilst magnifying
                             var adjustedState = state - self.previousZoomStageUpdateState
                             
                             self.zooming = true
@@ -113,18 +73,23 @@ struct ContentView: View {
                                     }
                                     else
                                     {
+                                        // If the user is at the upper limit of stages, cap the magnification
                                         adjustedState = 0.95
                                     }
                                 }
                                 else
                                 {
+                                    // Minimise the size of the elements based on the number of items to show per-line
                                     let updatedSize = self.calculateUpdatedSize(index: self.currentZoomStageIndex + 1)
                                     
                                     self.previousZoomStageUpdateState = state - 1
                                     
                                     self.zoomFactor = updatedSize / self.size
                                     self.scaleFactor = self.size / updatedSize
+                                    
+                                    // Setting the scale to the scale factor between sizes ensures the user doesn't see a 'jump' between stages
                                     self.scale = self.scaleFactor
+                                    
                                     self.size = updatedSize
                                     
                                     self.currentZoomStageIndex = self.currentZoomStageIndex + 1
@@ -143,6 +108,7 @@ struct ContentView: View {
                                     }
                                     else
                                     {
+                                        // If the user is at the lower limit of stages, cap the magnification
                                         adjustedState = 1.1
                                     }
                                 }
@@ -154,6 +120,8 @@ struct ContentView: View {
                                     self.calculateZoomFactor(at: self.currentZoomStageIndex)
                                     
                                     self.scaleFactor = 1
+                                    
+                                    // Setting the scale 1 ensures the user doesn't see a 'jump' between zoomed stages
                                     self.scale = 1
                                 }
                             }
@@ -174,11 +142,13 @@ struct ContentView: View {
                     .onEnded { _ in
                         
                         let shouldMagnify = self.adjustedState > 1
+                        let animationDuration = 0.25
                         
-                        withAnimation(.linear(duration: 0.25))
+                        withAnimation(.linear(duration: animationDuration))
                         {
                             if shouldMagnify
                             {
+                                // Continue zooming until it reaches limit for the next stage
                                 self.scale = self.zoomFactor
                             }
                             else
@@ -189,7 +159,9 @@ struct ContentView: View {
                         
                         if shouldMagnify
                         {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25)
+                            // Delay reset so zooming finishes and it smoothly transitions to the next zoom stage
+                            // This mimics the behaviour a user see's if they were to manually transition between stages by zooming
+                            DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration)
                             {
                                 if self.currentZoomStageIndex > 0
                                 {
