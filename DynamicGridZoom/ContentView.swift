@@ -65,7 +65,6 @@ struct ContentView: View {
     
     @State private var currentZoomStageIndex = 2
     @State private var previousZoomStageUpdateState: CGFloat = 0
-    @State private var actualState: CGFloat = 0
     @State private var adjustedState: CGFloat = 0
     
     @State private var gridWidth: CGFloat = 0
@@ -77,8 +76,7 @@ struct ContentView: View {
             GridItem(.adaptive(minimum: size), spacing: 2)
         ]
         
-        return ZStack {
-            ScrollView {
+        return ScrollView {
                 LazyVGrid(columns: columns, spacing: 2) {
                     ForEach(data, id: \.self) { item in
                         GridCell(item: item, size: size)
@@ -171,7 +169,6 @@ struct ContentView: View {
                                 }
                             }
                             
-                            self.actualState = state
                             self.adjustedState = adjustedState
                         }
                     .onEnded { _ in
@@ -186,12 +183,7 @@ struct ContentView: View {
                             }
                             else
                             {
-                                self.calculateZoomFactor(at: self.currentZoomStageIndex)
-                                self.zooming = false
-                                self.scale = 1
-                                self.scaleFactor = 1
-                                self.previousZoomStageUpdateState = 0
-                                self.adjustedState = 0
+                                self.resetZoomVariables()
                             }
                         }
                         
@@ -204,39 +196,23 @@ struct ContentView: View {
                                     self.currentZoomStageIndex = self.currentZoomStageIndex - 1
                                 }
                                 
-                                self.calculateZoomFactor(at: self.currentZoomStageIndex)
-                                self.zooming = false
-                                self.scale = 1
-                                self.scaleFactor = 1
-                                self.previousZoomStageUpdateState = 0
-                                self.adjustedState = 0
+                                self.resetZoomVariables()
                             }
                         }
                     }
                 )
             }
             .padding(.horizontal, 2)
-            
-            
-            VStack(spacing: 5) {
-                Text("Actual State: \(self.actualState)")
-                Text("Adjusted State: \(self.adjustedState)")
-                
-                Text("Scale: \(self.scale)")
-                
-                Text("Scale Factor: \(self.scaleFactor)")
-                Text("Zoom Factor: \(self.zoomFactor)")
-                
-//                Text("Magnifying: \(self.isMagnifying ? "true" : "false")")
-                
-//                Text("Zoom Index: \(self.currentZoomStageIndex)")
-//                Text("Number of Items: \(GridZoomStages.getZoomStage(at: self.currentZoomStageIndex))")
-            }
-            .padding(8)
-            .background(Color.white.opacity(0.85))
-            .cornerRadius(5)
-            .shadow(color: .black.opacity(0.5), radius: 3)
-        }
+    }
+    
+    func resetZoomVariables()
+    {
+        self.calculateZoomFactor(at: self.currentZoomStageIndex)
+        self.zooming = false
+        self.scale = 1
+        self.scaleFactor = 1
+        self.previousZoomStageUpdateState = 0
+        self.adjustedState = 0
     }
     
     func calculateUpdatedSize(index: Int) -> CGFloat
@@ -256,27 +232,6 @@ struct ContentView: View {
         self.zoomFactor = magnifiedSize / currentSize
         
         self.size = currentSize
-    }
-    
-    func update(increaseZoom: Bool?)
-    {
-        let newStageIndex = increaseZoom == nil ? self.currentZoomStageIndex : increaseZoom == true ? max(0, self.currentZoomStageIndex - 1) : self.currentZoomStageIndex + 1
-        
-        let zoomStages = GridZoomStages.getZoomStage(at: newStageIndex)
-        
-        let availableSpace = self.gridWidth - (2 * CGFloat(zoomStages))
-        
-        let size = availableSpace / CGFloat(zoomStages)
-        
-        DispatchQueue.main.async
-        {
-            // Performance starts to take a hit at 6/7 items displayed with very simple views
-            // Disabling animations improves this
-//            withAnimation {
-//                self.size = size
-//                self.currentZoomStageIndex = newStageIndex
-//            }
-        }
     }
 }
 
